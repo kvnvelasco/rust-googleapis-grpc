@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::error::Error;
 
 use serde::Deserialize;
+use std::path::PathBuf;
 use tonic::transport::{Channel, ClientTlsConfig, Endpoint, Identity, Uri};
 
 #[derive(Deserialize)]
@@ -16,6 +17,13 @@ pub struct Credentials {
 impl Credentials {
     pub fn from_json(json_str: &str) -> Result<Self, serde_json::Error> {
         serde_json::from_str(json_str)
+    }
+
+    pub fn auto_acquire() -> Result<Self, Box<dyn Error>> {
+        let path = std::env::var("GOOGLE_APPLICATION_CREDENTIALS").map(|env| PathBuf::from(env))?;
+        Ok(std::fs::read_to_string(&path).map(|data| {
+            Credentials::from_json(&data).expect("Unable to parse credentials in environment")
+        })?)
     }
 }
 

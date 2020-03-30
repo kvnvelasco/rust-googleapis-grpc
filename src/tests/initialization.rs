@@ -5,12 +5,10 @@ mod firestore_initialization {
 
     #[tokio::test]
     async fn test_authorization() {
-        let creds = include_str!("./credentials.json");
-        let connection = Firestore::connect(
-            Credentials::from_json(creds).expect("Unable to parse credentials"),
-        )
-        .await;
+        let connection = Credentials::auto_acquire()
+            .map(|creds| Firestore::connect(creds))
+            .expect("Unable to create connection");
 
-        assert!(connection.is_ok())
+        assert!(connection.await.is_ok())
     }
 }

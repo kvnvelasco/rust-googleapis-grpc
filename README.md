@@ -3,13 +3,29 @@
 Provides an autocomplete friendly set of bindings to googleapis via grpc. Utilizes the 
 excellent `tonic` package for codegen. 
 
-# Assumptions 
-This library assumes that you will be running inside the GCP platform where the 
-    GOOGLE_APPLICATION_CREDENTIALS environment variable is set. 
+
+# Basic Usage 
+
+## Authorization 
+The library assumes that you will be using service account authorization and requires a
+google credentials json file. The library will eventually load the credential file from 
+GOOGLE_APPLICATION_CREDENTIALS if available. 
+
+### Connecting
+
+As an example for connecting to the firestore service:
+
+```rust
+async fn main() {
+    let firestore = Credentials::auto_acquire()
+        .map(|creds| Firestore::connect(creds))
+        .expect("Unable to create connection");
+}
+```
 
 ## Progress 
 
-- [x] Firebase
+- [-] Firestore
 - [ ] Datastores 
 - [ ] App Engine 
 - [ ] Big Table 
