@@ -547,7 +547,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rust-googleapis-grpc"
+name = "rust_googleapis_grpc"
 version = "0.1.0"
 dependencies = [
  "prost",
