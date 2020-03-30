@@ -5,7 +5,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build_server(false)
         .out_dir("./src/protodefs")
         .compile(
-            &["googleapis-src/google/firestore/v1/firestore.proto"],
+            &[
+                "googleapis-src/google/firestore/v1/firestore.proto",
+                "googleapis-src/google/api/auth.proto",
+            ],
             &["googleapis-src"],
         )?;
     Ok(())
