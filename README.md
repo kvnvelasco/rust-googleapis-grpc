@@ -27,6 +27,7 @@ async fn main() {
 
 - [ ] Firestore
    - [x]  Create, read, delete 
+   - [ ]  Update in place
    - [ ]  Transactions, commits, and rollbacks 
    - [ ]  Streaming 
    - [ ]  Subscriptions 
