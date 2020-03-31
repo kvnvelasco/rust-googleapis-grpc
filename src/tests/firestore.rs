@@ -19,12 +19,12 @@ mod firestore {
     }
 
     #[tokio::test]
-    async fn test_create_document() {
+    async fn test_create_read_delete() {
         let mut connection = establish_connection()
             .await
             .expect("Unable to establish connection");
 
-        let output = connection
+        let document = connection
             .create_document(CreateDocumentRequest {
                 parent: connection.generate_document_prefix(""),
                 collection_id: "test-collection".to_string(),
@@ -34,16 +34,9 @@ mod firestore {
             })
             .await;
 
-        assert!(output.is_ok())
-    }
+        assert!(document.is_ok());
 
-    #[tokio::test]
-    async fn test_get_document() {
-        let mut connection = establish_connection()
-            .await
-            .expect("Unable to establish connection");
-
-        let doc = connection
+        let document = connection
             .get_document(GetDocumentRequest {
                 name: connection.generate_document_prefix("test-collection/test-item"),
                 mask: None,
@@ -51,22 +44,16 @@ mod firestore {
             })
             .await;
 
-        assert!(doc.is_ok());
-    }
+        assert!(document.is_ok());
 
-    #[tokio::test]
-    async fn test_delete_document() {
-        let mut connection = establish_connection()
-            .await
-            .expect("Unable to establish connection");
-
-        let doc = connection
+        let document = connection
             .delete_document(DeleteDocumentRequest {
                 name: connection.generate_document_prefix("test-collection/test-item"),
                 current_document: None
             })
             .await;
 
-        assert!(doc.is_ok());
+        assert!(document.is_ok());
     }
+
 }
