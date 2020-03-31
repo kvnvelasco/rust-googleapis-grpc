@@ -25,7 +25,12 @@ async fn main() {
 
 ## Progress 
 
-- [-] Firestore
+- [ ] Firestore
+   - [x]  Create, read, delete 
+   - [ ]  Transactions, commits, and rollbacks 
+   - [ ]  Streaming 
+   - [ ]  Subscriptions 
+   - [ ]  Derive Macros
 - [ ] Datastores 
 - [ ] App Engine 
 - [ ] Big Table 
