@@ -135,8 +135,10 @@ pub mod v1 {
         project_id: S,
     ) -> impl Fn(Response<RPCDocument>) -> Response<Document> {
         move |response| {
-            let mut resp =
-                Response::new(Document::from_rpc_document(response.get_ref(), project_id.as_ref()));
+            let mut resp = Response::new(Document::from_rpc_document(
+                response.get_ref(),
+                project_id.as_ref(),
+            ));
             let metadata = resp.metadata_mut();
             *metadata = response.metadata().to_owned();
             resp
@@ -233,6 +235,20 @@ pub mod v1 {
                 project_id: project_id.to_owned(),
             }
         }
+
+        pub fn as_rpc_document(&self) -> RPCDocument {
+            RPCDocument {
+                name: format!(
+                    "{}/{}/{}",
+                    create_firestore_default_prefix(&self.project_id),
+                    self.address.join("/"),
+                    self.name
+                ),
+                fields: self.fields.clone(),
+                create_time: self.inner.create_time.clone(),
+                update_time: self.inner.update_time.clone(),
+            }
+        }
         pub fn set_field<F: AsRef<str>, T: IntoDocumentValue>(
             &mut self,
             field_name: F,
@@ -296,6 +312,28 @@ pub mod v1 {
                     self.address.join("/"),
                     self.name
                 ),
+                current_document: None,
+            }
+        }
+
+        pub fn get_document_request(&self) -> GetDocumentRequest {
+            GetDocumentRequest {
+                name: format!(
+                    "{}/{}/{}",
+                    create_firestore_default_prefix(&self.project_id),
+                    self.address.join("/"),
+                    self.name
+                ),
+                mask: None,
+                consistency_selector: None,
+            }
+        }
+
+        pub fn update_document_request(&self) -> UpdateDocumentRequest {
+            UpdateDocumentRequest {
+                document: Some(self.as_rpc_document()),
+                update_mask: None,
+                mask: None,
                 current_document: None,
             }
         }
