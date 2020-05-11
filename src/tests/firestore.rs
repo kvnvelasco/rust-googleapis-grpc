@@ -35,8 +35,8 @@ mod firestore {
                 mask: None,
             })
             .await;
-        println!("{:?}", &document);
 
+        println!("{:?}", &document);
         assert!(document.is_ok());
 
         let document = connection
