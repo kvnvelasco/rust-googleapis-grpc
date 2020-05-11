@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod firestore {
     use crate::connection::Credentials;
-    use crate::firestore::v1::Firestore;
+    use crate::firestore::v1::{Document, Firestore};
     use crate::google::firestore::v1::{
         CreateDocumentRequest, DeleteDocumentRequest, GetDocumentRequest,
     };
@@ -20,7 +20,33 @@ mod firestore {
         assert!(connection.is_ok())
     }
 
+    fn create_document(firestore: &mut Firestore) {}
+
     #[tokio::test]
+    async fn it_creates_a_document() {
+        let mut connection = establish_connection()
+            .await
+            .expect("Unable to establish connection");
+
+        let mut document = Document::new("");
+        document.push_address("test-collection");
+        let request = document.create_document_request(&connection.project_id);
+
+        let response = connection.create_document(request).await;
+        debug_assert!(response.is_ok(), "{:?}", &response);
+
+        let deleted = connection
+            .delete_document(
+                response
+                    .unwrap()
+                    .get_ref()
+                    .delete_document_request(&connection.project_id),
+            )
+            .await;
+
+        debug_assert!(deleted.is_ok(), "{:?}", deleted);
+    }
+
     async fn test_create_read_delete() {
         let mut connection = establish_connection()
             .await

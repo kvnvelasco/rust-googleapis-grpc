@@ -17,7 +17,7 @@ pub mod v1 {
     pub struct Firestore {
         service: FirestoreClient<Channel>,
         credentials: Credentials,
-        project_id: String,
+        pub project_id: String,
     }
 
     impl Firestore {
@@ -136,16 +136,22 @@ pub mod v1 {
         resp
     }
 
+    fn create_firestore_default_prefix(project_id: &str) -> String {
+        return format!("projects/{}/databases/(default)/documents", project_id);
+    }
+
     #[derive(Debug)]
     pub struct Document {
         inner: RPCDocument,
         fields: HashMap<String, Value>,
+        address: Vec<String>,
+        name: String,
     }
 
     impl Into<RPCDocument> for Document {
         fn into(self) -> RPCDocument {
             RPCDocument {
-                name: self.inner.name,
+                name: self.address.join("/"),
                 fields: self.fields,
                 create_time: self.inner.create_time,
                 update_time: self.inner.update_time,
@@ -161,19 +167,22 @@ pub mod v1 {
 
     impl From<&RPCDocument> for Document {
         fn from(d: &RPCDocument) -> Self {
-            let d = d.to_owned();
-            Document {
-                inner: d.clone(),
-                fields: d.fields,
-            }
+            Document::from(d.clone())
         }
     }
 
     impl From<RPCDocument> for Document {
         fn from(d: RPCDocument) -> Self {
+            let d = d.to_owned();
+            let address: Vec<String> = d.name.split("/").map(|i| i.to_owned()).collect();
+            // all returned documents from the server have full paths, we want to strip that and only take the required path;
+            // TOOD: Make this better somehow
+            let address = address[5..].to_vec();
             Document {
                 inner: d.clone(),
                 fields: d.fields,
+                name: address.last().expect("Document has no name").to_owned(),
+                address: address[0..address.len() - 1].to_vec(),
             }
         }
     }
@@ -221,9 +230,11 @@ pub mod v1 {
                     fields: Default::default(),
                     create_time: None,
                     update_time: None,
-                    name: name.as_ref().to_owned(),
+                    name: "".to_owned(),
                 },
+                address: Vec::new(),
                 fields: Default::default(),
+                name: name.as_ref().to_owned(),
             }
         }
         pub fn set_field<F: AsRef<str>, T: IntoDocumentValue>(
@@ -245,6 +256,51 @@ pub mod v1 {
             match maybe {
                 Some(Some(v)) => Some(v),
                 _ => None,
+            }
+        }
+
+        pub fn push_address<S: AsRef<str>>(&mut self, value: S) -> &mut Self {
+            self.address.push(value.as_ref().to_owned());
+            self
+        }
+
+        fn create_parent(&self, project_id: &str) -> String {
+            match self.address.len() {
+                1 => create_firestore_default_prefix(project_id),
+                _ => format!(
+                    "{}/{}",
+                    create_firestore_default_prefix(project_id),
+                    self.address[0..self.address.len() - 1].join("/")
+                ),
+            }
+        }
+
+        pub fn create_document_request(&self, project_id: &str) -> CreateDocumentRequest {
+            let parent = self.create_parent(project_id);
+            let address = self.address.last().unwrap().to_owned();
+            CreateDocumentRequest {
+                parent,
+                collection_id: address,
+                document_id: self.name.clone(),
+                document: Some(RPCDocument {
+                    name: "".to_string(),
+                    fields: self.fields.clone(),
+                    create_time: None,
+                    update_time: None,
+                }),
+                mask: None,
+            }
+        }
+
+        pub fn delete_document_request(&self, project_id: &str) -> DeleteDocumentRequest {
+            DeleteDocumentRequest {
+                name: format!(
+                    "{}/{}/{}",
+                    create_firestore_default_prefix(project_id),
+                    self.address.join("/"),
+                    self.name
+                ),
+                current_document: None,
             }
         }
     }
