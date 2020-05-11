@@ -34,6 +34,10 @@ pub mod v1 {
             })
         }
 
+        pub fn new_document(&self, name: &str) -> Document {
+            Document::new(&self.project_id, name)
+        }
+
         async fn add_metadata_to_request<X, R: tonic::IntoRequest<X>>(
             &mut self,
             document: R,
@@ -77,7 +81,7 @@ pub mod v1 {
             self.service
                 .create_document(req)
                 .await
-                .map(transform_response_to_document_response)
+                .map(transform_response_to_document_response(&self.project_id))
         }
 
         pub async fn get_document(
@@ -93,7 +97,7 @@ pub mod v1 {
             self.service
                 .get_document(req)
                 .await
-                .map(transform_response_to_document_response)
+                .map(transform_response_to_document_response(&self.project_id))
         }
 
         pub async fn update_document(
@@ -110,7 +114,7 @@ pub mod v1 {
             self.service
                 .update_document(req)
                 .await
-                .map(transform_response_to_document_response)
+                .map(transform_response_to_document_response(&self.project_id))
         }
 
         pub async fn delete_document(
@@ -127,13 +131,16 @@ pub mod v1 {
         }
     }
 
-    fn transform_response_to_document_response(
-        response: Response<RPCDocument>,
-    ) -> Response<Document> {
-        let mut resp = Response::new(Document::from(response.get_ref()));
-        let metadata = resp.metadata_mut();
-        *metadata = response.metadata().to_owned();
-        resp
+    fn transform_response_to_document_response<S: AsRef<str>>(
+        project_id: S,
+    ) -> impl Fn(Response<RPCDocument>) -> Response<Document> {
+        move |response| {
+            let mut resp =
+                Response::new(Document::from_rpc_document(response.get_ref(), project_id.as_ref()));
+            let metadata = resp.metadata_mut();
+            *metadata = response.metadata().to_owned();
+            resp
+        }
     }
 
     fn create_firestore_default_prefix(project_id: &str) -> String {
@@ -146,6 +153,7 @@ pub mod v1 {
         fields: HashMap<String, Value>,
         address: Vec<String>,
         name: String,
+        project_id: String,
     }
 
     impl Into<RPCDocument> for Document {
@@ -155,34 +163,6 @@ pub mod v1 {
                 fields: self.fields,
                 create_time: self.inner.create_time,
                 update_time: self.inner.update_time,
-            }
-        }
-    }
-
-    impl From<Response<RPCDocument>> for Document {
-        fn from(x: Response<RPCDocument>) -> Self {
-            Document::from(x.get_ref())
-        }
-    }
-
-    impl From<&RPCDocument> for Document {
-        fn from(d: &RPCDocument) -> Self {
-            Document::from(d.clone())
-        }
-    }
-
-    impl From<RPCDocument> for Document {
-        fn from(d: RPCDocument) -> Self {
-            let d = d.to_owned();
-            let address: Vec<String> = d.name.split("/").map(|i| i.to_owned()).collect();
-            // all returned documents from the server have full paths, we want to strip that and only take the required path;
-            // TOOD: Make this better somehow
-            let address = address[5..].to_vec();
-            Document {
-                inner: d.clone(),
-                fields: d.fields,
-                name: address.last().expect("Document has no name").to_owned(),
-                address: address[0..address.len() - 1].to_vec(),
             }
         }
     }
@@ -224,7 +204,7 @@ pub mod v1 {
     }
 
     impl Document {
-        pub fn new<Name: AsRef<str>>(name: Name) -> Self {
+        pub fn new<Name: AsRef<str>>(project_id: &str, name: Name) -> Self {
             Document {
                 inner: RPCDocument {
                     fields: Default::default(),
@@ -235,6 +215,22 @@ pub mod v1 {
                 address: Vec::new(),
                 fields: Default::default(),
                 name: name.as_ref().to_owned(),
+                project_id: project_id.to_owned(),
+            }
+        }
+
+        pub fn from_rpc_document(d: &RPCDocument, project_id: &str) -> Self {
+            let d = d.to_owned();
+            let address: Vec<String> = d.name.split("/").map(|i| i.to_owned()).collect();
+            // all returned documents from the server have full paths, we want to strip that and only take the required path;
+            // TOOD: Make this better somehow
+            let address = address[5..].to_vec();
+            Document {
+                inner: d.clone(),
+                fields: d.fields,
+                name: address.last().expect("Document has no name").to_owned(),
+                address: address[0..address.len() - 1].to_vec(),
+                project_id: project_id.to_owned(),
             }
         }
         pub fn set_field<F: AsRef<str>, T: IntoDocumentValue>(
@@ -275,8 +271,8 @@ pub mod v1 {
             }
         }
 
-        pub fn create_document_request(&self, project_id: &str) -> CreateDocumentRequest {
-            let parent = self.create_parent(project_id);
+        pub fn create_document_request(&self) -> CreateDocumentRequest {
+            let parent = self.create_parent(&self.project_id);
             let address = self.address.last().unwrap().to_owned();
             CreateDocumentRequest {
                 parent,
@@ -292,11 +288,11 @@ pub mod v1 {
             }
         }
 
-        pub fn delete_document_request(&self, project_id: &str) -> DeleteDocumentRequest {
+        pub fn delete_document_request(&self) -> DeleteDocumentRequest {
             DeleteDocumentRequest {
                 name: format!(
                     "{}/{}/{}",
-                    create_firestore_default_prefix(project_id),
+                    create_firestore_default_prefix(&self.project_id),
                     self.address.join("/"),
                     self.name
                 ),

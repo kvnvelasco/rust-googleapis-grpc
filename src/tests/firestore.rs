@@ -28,9 +28,9 @@ mod firestore {
             .await
             .expect("Unable to establish connection");
 
-        let mut document = Document::new("");
+        let mut document = connection.new_document("test-new-doc-thing");
         document.push_address("test-collection");
-        let request = document.create_document_request(&connection.project_id);
+        let request = document.create_document_request();
 
         let response = connection.create_document(request).await;
         debug_assert!(response.is_ok(), "{:?}", &response);
@@ -40,7 +40,7 @@ mod firestore {
                 response
                     .unwrap()
                     .get_ref()
-                    .delete_document_request(&connection.project_id),
+                    .delete_document_request(),
             )
             .await;
 
