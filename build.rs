@@ -9,6 +9,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "googleapis-src/google/firestore/v1/firestore.proto",
                 "googleapis-src/google/api/auth.proto",
                 "googleapis-src/google/datastore/v1/datastore.proto",
+                "googleapis-src/google/api/auth.proto",
             ],
             &["googleapis-src"],
         )?;

@@ -2,7 +2,9 @@
 mod firestore {
     use crate::connection::Credentials;
     use crate::firestore::v1::Firestore;
-    use crate::google::firestore::v1::{CreateDocumentRequest, GetDocumentRequest, DeleteDocumentRequest};
+    use crate::google::firestore::v1::{
+        CreateDocumentRequest, DeleteDocumentRequest, GetDocumentRequest,
+    };
     use std::error::Error;
 
     async fn establish_connection() -> Result<Firestore, Box<dyn Error>> {
@@ -33,6 +35,7 @@ mod firestore {
                 mask: None,
             })
             .await;
+        println!("{:?}", &document);
 
         assert!(document.is_ok());
 
@@ -49,11 +52,13 @@ mod firestore {
         let document = connection
             .delete_document(DeleteDocumentRequest {
                 name: connection.generate_document_prefix("test-collection/test-item"),
-                current_document: None
+                current_document: None,
             })
             .await;
 
         assert!(document.is_ok());
     }
 
+    #[tokio::test]
+    async fn test_update() {}
 }
